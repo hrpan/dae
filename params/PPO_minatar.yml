@@ -1,0 +1,15 @@
+batch_size: 256
+clip_range:
+    init: 0.1
+    final: 0
+    ftype: "linear"
+vf_coef: 0.5
+ent_coef: 0.01
+learning_rate:
+    init: 0.00025
+    final: 0
+    ftype: "linear"
+n_epochs: 4
+n_steps: 128
+nenvs: 1024
+features_extractor: "minatar"

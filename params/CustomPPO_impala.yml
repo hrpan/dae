@@ -1,0 +1,19 @@
+advantage_normalization: true
+batch_size: 256
+clip_range:
+    init: 0.1
+    final: 0
+    ftype: "linear"
+ent_coef: 0.01
+full_action: false
+kl_coef: 0.0
+vf_coef: 1.5
+learning_rate:
+    init: 0.00025
+    final: 0
+    ftype: "linear"
+n_epochs: 6
+n_steps: 128
+shared: true
+features_extractor: "impala"
+nenvs: 1024
