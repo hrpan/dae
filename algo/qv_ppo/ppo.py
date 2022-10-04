@@ -19,7 +19,7 @@ class QVPPO(OnPolicyAlgorithm):
     """
     Proximal Policy Optimization algorithm (PPO) with learned Q/V functions
 
-    Code: Code borrow from Stable Baselines 3 (https://github.com/DLR-RM/stable-baselines3)
+    Code: Code borrowed from Stable Baselines 3 (https://github.com/DLR-RM/stable-baselines3)
 
     :param policy: The policy model to use (MlpPolicy, CnnPolicy, ...)
     :param env: The environment to learn from (if registered in Gym, can be str)
@@ -32,12 +32,9 @@ class QVPPO(OnPolicyAlgorithm):
     :param clip_range: Clipping parameter, it can be a function of the current progress
         remaining (from 1 to 0).
     :param ent_coef: Entropy coefficient for the loss calculation
+    :param kl_coef: KL penalty coefficient for actor training
     :param vf_coef: Value function coefficient for the loss calculation
     :param max_grad_norm: The maximum value for the gradient clipping
-    :param target_kl: Limit the KL divergence between updates,
-        because the clipping is not enough to prevent large update
-        see issue #213 (cf https://github.com/hill-a/stable-baselines/issues/213)
-        By default, there is no limit on the kl div.
     :param tensorboard_log: the log location for tensorboard (if None, no logging)
     :param create_eval_env: Whether to create a second environment that will be
         used for evaluating the agent periodically. (Only available when passing string for the environment)
@@ -66,7 +63,6 @@ class QVPPO(OnPolicyAlgorithm):
         tensorboard_log: Optional[str] = None,
         advantage_normalization: bool = False,
         full_action: bool = True,
-        dae_correction: bool = True,
         create_eval_env: bool = False,
         policy_kwargs: Optional[Dict[str, Any]] = None,
         verbose: int = 0,
@@ -103,7 +99,6 @@ class QVPPO(OnPolicyAlgorithm):
         self.full_action = full_action
         self.clip_range = clip_range
         self.kl_coef = kl_coef
-        self.dae_correction = dae_correction
 
         self.discount_matrix = th.tensor(
             [[0 if j < i else self.gamma ** (j-i) for j in range(n_steps)] for i in range(n_steps)],
