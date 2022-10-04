@@ -61,26 +61,20 @@ def _worker(
 
 class CustomVecEnv(VecEnv):
     """
-    Creates a multiprocess vectorized wrapper for multiple environments, distributing each environment to its own
-    process, allowing significant speed up when the environment is computationally complex.
+    Asynchronous vectorized environment with which distributes the number of environments
+    according to the specified threads. This is useful when the number of parallel
+    environments is much larger than the number of physical processors.
 
-    For performance reasons, if your environment is not IO bound, the number of environments should not exceed the
-    number of logical cores on your CPU.
+    WARNING: ONLY CORE FUNCTIONALITY IS IMPLEMENTED
 
-    .. warning::
-
-        Only 'forkserver' and 'spawn' start methods are thread-safe,
-        which is important when TensorFlow sessions or other non thread-safe
-        libraries are used in the parent (see issue #217). However, compared to
-        'fork' they incur a small start-up cost and have restrictions on
-        global variables. With those methods, users must wrap the code in an
-        ``if __name__ == "__main__":`` block.
-        For more information, see the multiprocessing documentation.
+    Code adapted from:
+    https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/subproc_vec_env.py
 
     :param env_fns: Environments to run in subprocesses
     :param start_method: method used to start the subprocesses.
            Must be one of the methods returned by multiprocessing.get_all_start_methods().
            Defaults to 'forkserver' on available platforms, and 'spawn' otherwise.
+    :param threads: number of parallel threads
     """
 
     def __init__(self, env_fns: List[Callable[[], gym.Env]], start_method: Optional[str] = None, threads: int = 1):
