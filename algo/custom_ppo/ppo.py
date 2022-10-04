@@ -3,6 +3,7 @@ from functools import partial
 
 import numpy as np
 import torch as th
+import warnings
 
 from gym import spaces
 from algo.custom_ppo.policy import CustomActorCriticPolicy
@@ -24,27 +25,29 @@ class CustomPPO(OnPolicyAlgorithm):
 
     Introduction to PPO: https://spinningup.openai.com/en/latest/algorithms/ppo.html
 
-    :param policy: The policy model to use (MlpPolicy, CnnPolicy, ...)
+    :param policy: The policy model to use
     :param env: The environment to learn from (if registered in Gym, can be str)
     :param learning_rate: The learning rate, it can be a function
         of the current progress remaining (from 1 to 0)
+    :param learning_rate_vf: The learning rate for the value function, it can be a function
+        of the current progress remaining (from 1 to 0) (only used when actor/critic are separeted)
     :param n_steps: The number of steps to run for each environment per update
-        (i.e. rollout buffer size is n_steps * n_envs where n_envs is number of environment copies running in parallel)
-        NOTE: n_steps * n_envs must be greater than 1 (because of the advantage normalization)
-        See https://github.com/pytorch/pytorch/issues/29372
     :param batch_size: Minibatch size
+    :param batch_size_vf: Minibatch size for critic training (only used when actor/critic are separeted)
     :param n_epochs: Number of epoch when optimizing the surrogate loss
+    :param n_epochs_vf: Number of epoch when optimizing the surrogate loss for critic training (only used when actor/critic are separeted)
     :param gamma: Discount factor
     :param clip_range: Clipping parameter, it can be a function of the current progress
         remaining (from 1 to 0).
     :param ent_coef: Entropy coefficient for the loss calculation
+    :param kl_coef: KL penalty coefficient for actor training
     :param vf_coef: Value function coefficient for the loss calculation
+    :param shared: Use shared network for actor/critic (seperate training is)
     :param max_grad_norm: The maximum value for the gradient clipping
-    :param target_kl: Limit the KL divergence between updates,
-        because the clipping is not enough to prevent large update
-        see issue #213 (cf https://github.com/hill-a/stable-baselines/issues/213)
-        By default, there is no limit on the kl div.
     :param tensorboard_log: the log location for tensorboard (if None, no logging)
+    :param advantage_normalization: normalize the estimated advantage before computing PPO loss
+    :param full_action: update policy using all actions instead of just the sampled ones
+    :param dae_correction: compute critic loss with DAE-style (multistep advantage) or DuelingDQN-style (first step advantage)
     :param create_eval_env: Whether to create a second environment that will be
         used for evaluating the agent periodically. (Only available when passing string for the environment)
     :param policy_kwargs: additional arguments to be passed to the policy on creation
@@ -117,6 +120,9 @@ class CustomPPO(OnPolicyAlgorithm):
         self.clip_range = clip_range
         self.kl_coef = kl_coef
         self.shared = shared
+
+        if not shared:
+            warnings.warn('Training with seperate actor/critic is deprecated, use at your own risk')
         self.dae_correction = dae_correction
 
         self.discount_matrix = th.tensor(
