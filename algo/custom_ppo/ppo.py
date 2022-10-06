@@ -21,7 +21,7 @@ class CustomPPO(OnPolicyAlgorithm):
     Proximal Policy Optimization algorithm (PPO) with direct advantage estimation
 
     Paper: https://arxiv.org/abs/1707.06347
-    Code: Code borrow from Stable Baselines 3 (https://github.com/DLR-RM/stable-baselines3)
+    Code: Code borrowed from Stable Baselines 3 (https://github.com/DLR-RM/stable-baselines3)
 
     Introduction to PPO: https://spinningup.openai.com/en/latest/algorithms/ppo.html
 
