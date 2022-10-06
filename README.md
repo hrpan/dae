@@ -15,8 +15,8 @@ To reproduce the results, run the following command:
 python train.py --algo {algo} --hparam_file {hyperparameter_file} --envs {env} 
 ```
 
-`--algo`: Either `PPO` or `CustomPPO`
+`--algo`: `PPO` (GAE) or `CustomPPO` (DAE)
 
 `--hparam_file`: See `./params/` for the hyperparameters used in the paper, the files are named by `{algo}_{network}.yml`
 
-`--envs`: The environment to traing. (e.g., `Pong`, `Breakout`...) For MinAtar environments, please add the suffix `-MinAtar-v0`. (e.g., `Breakout-MinAtar-v0`)
+`--envs`: Environment to train. For example, `Pong`, `Breakout`, etc. For MinAtar environments, please add the suffix `-MinAtar-v0`. (e.g., `Breakout-MinAtar-v0`)
