@@ -11,31 +11,30 @@ pip install -U pip
 ```
 
 Install requirements:
-```setup
+```bash
 pip install -r requirements.txt
 ```
 
 ## Training
 
 To reproduce the results, run the following command:
-```setup
-python train.py --algo {algo} --hparam_file {hyperparameter_file} --envs {env} 
+```bash
+python train.py --algo {algo} --hparam_file {hyperparameter_file} --envs {env} --threads {threads}
 ```
 
-`--algo`: Either `PPO` or `CustomPPO`
+`--algo`: `PPO` (GAE) or `CustomPPO` (DAE)
 
 `--hparam_file`: See `./params/` for the hyperparameters used in the paper, the files are named by `{algo}_{network}.yml`
 
-`--envs`: The environment to train. (e.g., `Pong`, `Breakout`...) For MinAtar environments, please add the suffix `-MinAtar-v0`. (e.g., `Breakout-MinAtar-v0`)
+`--envs`: Environment to train. For example, `Pong`, `Breakout`, etc. For MinAtar environments, please add the suffix `-MinAtar-v0`. (e.g., `Breakout-MinAtar-v0`)
 
-More flags:
+### Optional arguments
 
-`--logging`: Save logs in `./logs/{env}/`.
+`--threads`: Number of parallel threads for asynchronous environment steps
+
+`--logging`: Save logs in `./logs/{env}/`
+
 `--save_model`: Save the trained model to `./logs/{env}/`
-
-## Running a trained agent
-
-TODO: Is it doable to add a script for this?
 
 ## Viewing logs
 
@@ -57,3 +56,8 @@ Please use the following BibTex entry.
   year={2021}
 }
 ```
+
+
+
+
+
