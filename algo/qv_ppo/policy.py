@@ -33,7 +33,7 @@ class QVActorCriticPolicy(ActorCriticPolicy):
             activation_fn=nn.Tanh,
             ortho_init=ortho_init,
             use_sde=False,
-            log_std_init=0.,
+            log_std_init=0.0,
             full_std=True,
             sde_net_arch=None,
             use_expln=False,
@@ -50,10 +50,14 @@ class QVActorCriticPolicy(ActorCriticPolicy):
         Create the networks and the optimizer.
         """
 
-        self.action_net = self.action_dist.proba_distribution_net(latent_dim=self.features_extractor.features_dim)
+        self.action_net = self.action_dist.proba_distribution_net(
+            latent_dim=self.features_extractor.features_dim
+        )
 
         self.value_net = nn.Linear(self.features_extractor.features_dim, 1)
-        self.q_net = nn.Linear(self.features_extractor.features_dim, self.action_space.n)
+        self.q_net = nn.Linear(
+            self.features_extractor.features_dim, self.action_space.n
+        )
 
         if self.ortho_init:
             module_gains = {
@@ -66,7 +70,9 @@ class QVActorCriticPolicy(ActorCriticPolicy):
                 module.apply(partial(self.init_weights, gain=gain))
 
         # Setup optimizer with initial learning rate
-        self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
+        self.optimizer = self.optimizer_class(
+            self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs
+        )
 
     def _predict(self, obs: th.Tensor, deterministic: bool = False) -> th.Tensor:
 
@@ -76,7 +82,9 @@ class QVActorCriticPolicy(ActorCriticPolicy):
 
         return distribution.get_actions(deterministic=deterministic)
 
-    def forward(self, obs: th.Tensor, deterministic: bool = False) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
+    def forward(
+        self, obs: th.Tensor, deterministic: bool = False
+    ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
 
         latent = self.extract_features(obs)
         mean_actions = self.action_net(latent)
@@ -88,7 +96,9 @@ class QVActorCriticPolicy(ActorCriticPolicy):
 
         return actions, policies, log_policies, values
 
-    def evaluate_actions(self, obs: th.Tensor, actions: th.Tensor) -> Tuple[th.Tensor, th.Tensor, th.Tensor, th.Tensor]:
+    def evaluate_actions(
+        self, obs: th.Tensor, actions: th.Tensor
+    ) -> Tuple[th.Tensor, th.Tensor, th.Tensor, th.Tensor]:
 
         latent = self.extract_features(obs)
 
@@ -99,7 +109,9 @@ class QVActorCriticPolicy(ActorCriticPolicy):
         values = self.value_net(latent)
         return values, q_values, log_probs, distribution.entropy()
 
-    def evaluate_state(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor, th.Tensor, th.Tensor, th.Tensor]:
+    def evaluate_state(
+        self, obs: th.Tensor
+    ) -> Tuple[th.Tensor, th.Tensor, th.Tensor, th.Tensor, th.Tensor]:
 
         latent = self.extract_features(obs)
         distribution = self._get_action_dist_from_latent(latent)

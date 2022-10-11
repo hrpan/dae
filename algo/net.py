@@ -6,7 +6,6 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
 class MinAtarCNN(BaseFeaturesExtractor):
-
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
         super(MinAtarCNN, self).__init__(observation_space, features_dim)
         n_input_channels = observation_space.shape[0]
@@ -20,12 +19,11 @@ class MinAtarCNN(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
+            n_flatten = cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
 
-        linear = nn.Sequential(
-            nn.Linear(n_flatten, features_dim),
-            nn.ReLU(),
-        )
+        linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU(),)
 
         self.seq = nn.Sequential(cnn, linear)
 
@@ -34,7 +32,6 @@ class MinAtarCNN(BaseFeaturesExtractor):
 
 
 class MinAtarCNN4X(BaseFeaturesExtractor):
-
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 1024):
         super(MinAtarCNN4X, self).__init__(observation_space, features_dim)
         n_input_channels = observation_space.shape[0]
@@ -48,12 +45,11 @@ class MinAtarCNN4X(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
+            n_flatten = cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
 
-        linear = nn.Sequential(
-            nn.Linear(n_flatten, features_dim),
-            nn.ReLU(),
-        )
+        linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU(),)
 
         self.seq = nn.Sequential(cnn, linear)
 
@@ -62,7 +58,6 @@ class MinAtarCNN4X(BaseFeaturesExtractor):
 
 
 class NatureCNN2X(BaseFeaturesExtractor):
-
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 1024):
         super(NatureCNN2X, self).__init__(observation_space, features_dim)
         n_input_channels = observation_space.shape[0]
@@ -78,7 +73,9 @@ class NatureCNN2X(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = self.cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
+            n_flatten = self.cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
 
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
@@ -87,13 +84,18 @@ class NatureCNN2X(BaseFeaturesExtractor):
 
 
 class Block(nn.Module):
-
     def __init__(self, in_channels, out_channels):
         super(Block, self).__init__()
 
         self.downsample = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+            ),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
 
         self.res1 = nn.Sequential(
@@ -120,7 +122,6 @@ class Block(nn.Module):
 
 
 class IMPALACNN(BaseFeaturesExtractor):
-
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 512):
         super(IMPALACNN, self).__init__(observation_space, features_dim)
         n_input_channels = observation_space.shape[0]
@@ -134,7 +135,9 @@ class IMPALACNN(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = self.cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
+            n_flatten = self.cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
 
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 

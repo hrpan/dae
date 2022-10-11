@@ -48,18 +48,28 @@ class CustomBuffer(BaseBuffer):
         n_envs: int = 1,
     ):
 
-        super(CustomBuffer, self).__init__(buffer_size, observation_space, action_space, device, n_envs=n_envs)
+        super(CustomBuffer, self).__init__(
+            buffer_size, observation_space, action_space, device, n_envs=n_envs
+        )
 
-        self._observations = np.zeros((self.buffer_size, self.n_envs) + self.obs_shape, dtype=np.float32)
+        self._observations = np.zeros(
+            (self.buffer_size, self.n_envs) + self.obs_shape, dtype=np.float32
+        )
         self._actions = np.zeros((self.buffer_size, self.n_envs, 1), dtype=np.long)
         self._rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
-        self._policies = np.zeros((self.buffer_size, self.n_envs, self.action_space.n), dtype=np.float32)
-        self._log_policies = np.zeros((self.buffer_size, self.n_envs, self.action_space.n), dtype=np.float32)
+        self._policies = np.zeros(
+            (self.buffer_size, self.n_envs, self.action_space.n), dtype=np.float32
+        )
+        self._log_policies = np.zeros(
+            (self.buffer_size, self.n_envs, self.action_space.n), dtype=np.float32
+        )
         self._values = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.reset()
 
     def reset(self) -> None:
-        self.observations = self.actions = self.rewards = self.policies = self.log_policies = self.values = None
+        self.observations = (
+            self.actions
+        ) = self.rewards = self.policies = self.log_policies = self.values = None
         self._observations.fill(0)
         self._actions.fill(0)
         self._rewards.fill(0)
@@ -72,14 +82,14 @@ class CustomBuffer(BaseBuffer):
         super(CustomBuffer, self).reset()
 
     def add(
-            self,
-            obs: np.ndarray,
-            action: np.ndarray,
-            reward: np.ndarray,
-            done: np.ndarray,
-            policy: th.Tensor,
-            log_policy: th.Tensor,
-            value: th.Tensor
+        self,
+        obs: np.ndarray,
+        action: np.ndarray,
+        reward: np.ndarray,
+        done: np.ndarray,
+        policy: th.Tensor,
+        log_policy: th.Tensor,
+        value: th.Tensor,
     ) -> None:
         """
         :param obs: Observation
@@ -105,15 +115,17 @@ class CustomBuffer(BaseBuffer):
         for eid, d in enumerate(done):
             if d:
                 last_p, p = self.last_pos[eid], self.pos
-                self.trajectories.append((
-                    self._observations[last_p: p, eid],
-                    self._actions[last_p: p, eid],
-                    self._rewards[last_p: p, eid],
-                    self._policies[last_p: p, eid],
-                    self._log_policies[last_p: p, eid],
-                    self._values[last_p: p, eid],
-                    0
-                ))
+                self.trajectories.append(
+                    (
+                        self._observations[last_p:p, eid],
+                        self._actions[last_p:p, eid],
+                        self._rewards[last_p:p, eid],
+                        self._policies[last_p:p, eid],
+                        self._log_policies[last_p:p, eid],
+                        self._values[last_p:p, eid],
+                        0,
+                    )
+                )
                 self.last_pos[eid] = self.pos
         if self.pos == self.buffer_size:
             self.full = True
@@ -123,15 +135,17 @@ class CustomBuffer(BaseBuffer):
         for eid in range(self.n_envs):
             last_p = self.last_pos[eid]
             if last_p < self.buffer_size:
-                self.trajectories.append((
-                    self._observations[last_p:, eid],
-                    self._actions[last_p:, eid],
-                    self._rewards[last_p:, eid],
-                    self._policies[last_p:, eid],
-                    self._log_policies[last_p:, eid],
-                    self._values[last_p:, eid],
-                    last_values[eid, 0].item()
-                ))
+                self.trajectories.append(
+                    (
+                        self._observations[last_p:, eid],
+                        self._actions[last_p:, eid],
+                        self._rewards[last_p:, eid],
+                        self._policies[last_p:, eid],
+                        self._log_policies[last_p:, eid],
+                        self._values[last_p:, eid],
+                        last_values[eid, 0].item(),
+                    )
+                )
 
         _obs, _act, _rew, _pol, _lpol, _val, _last = zip(*self.trajectories)
 
@@ -146,10 +160,14 @@ class CustomBuffer(BaseBuffer):
 
         self.start_indices = np.insert(np.cumsum(self.lengths), 0, 0)[:-1]
         self.end_indices = np.cumsum(self.lengths)
-        self.advantages = th.empty(self.policies.shape, dtype=th.float32, device=self.device)
+        self.advantages = th.empty(
+            self.policies.shape, dtype=th.float32, device=self.device
+        )
 
     def update_value(self, policy, batch_size=1024):
-        self.values = th.empty((self.buffer_size * self.n_envs, 1), dtype=th.float32, device=self.device)
+        self.values = th.empty(
+            (self.buffer_size * self.n_envs, 1), dtype=th.float32, device=self.device
+        )
         start = 0
         size = len(self.observations)
         while start < size:
@@ -157,7 +175,7 @@ class CustomBuffer(BaseBuffer):
             data = self._get_samples(th.arange(start, end, device=self.device))
             with th.no_grad():
                 v, _ = policy.predict_value(data.observations, data.old_policies)
-            self.values[start: end] = v
+            self.values[start:end] = v
             start = end
         self.values = self.values.cpu()
 
@@ -166,14 +184,16 @@ class CustomBuffer(BaseBuffer):
         size = len(self.observations)
         while start < size:
             end = min(start + batch_size, size)
-            _obs = self.observations[start: end]
-            _pol = self.policies[start: end]
+            _obs = self.observations[start:end]
+            _pol = self.policies[start:end]
             with th.no_grad():
                 _, adv = policy.predict_value(_obs, _pol)
-            self.advantages[start: end] = adv
+            self.advantages[start:end] = adv
             start = end
 
-    def get(self, batch_size: Optional[int] = None) -> Generator[RolloutBufferSamples, None, None]:
+    def get(
+        self, batch_size: Optional[int] = None
+    ) -> Generator[RolloutBufferSamples, None, None]:
         assert self.full, ""
 
         indices = th.randperm(len(self.observations), device=self.device)
@@ -183,7 +203,9 @@ class CustomBuffer(BaseBuffer):
 
         start_idx = 0
         while start_idx < len(indices):
-            yield self._get_samples(indices[start_idx: min(start_idx + batch_size, len(indices))])
+            yield self._get_samples(
+                indices[start_idx : min(start_idx + batch_size, len(indices))]
+            )
             start_idx += batch_size
 
     def _get_samples(self, indices) -> CustomSamples:
@@ -194,7 +216,7 @@ class CustomBuffer(BaseBuffer):
             self.rewards.index_select(dim=0, index=indices),
             self.policies.index_select(dim=0, index=indices),
             self.log_policies.index_select(dim=0, index=indices),
-            self.advantages.index_select(dim=0, index=indices)
+            self.advantages.index_select(dim=0, index=indices),
         )
 
         return CustomSamples(*tuple(data))
@@ -222,24 +244,34 @@ class CustomBuffer(BaseBuffer):
 
     def _get_traj_samples(self, indices) -> CustomTrajSamples:
 
-        _obs, _act, _rew, _pol, _lpol, _val, _last, splits = [], [], [], [], [], [], [], []
+        _obs, _act, _rew, _pol, _lpol, _val, _last, splits = (
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
         for idx in indices:
             start, end = self.start_indices[idx], self.end_indices[idx]
-            _obs.append(self.observations[start: end])
-            _act.append(self.actions[start: end])
-            _rew.append(self.rewards[start: end])
-            _pol.append(self.policies[start: end])
-            _lpol.append(self.log_policies[start: end])
-            _val.append(self.values[start: end])
+            _obs.append(self.observations[start:end])
+            _act.append(self.actions[start:end])
+            _rew.append(self.rewards[start:end])
+            _pol.append(self.policies[start:end])
+            _lpol.append(self.log_policies[start:end])
+            _val.append(self.values[start:end])
             _last.append(self.last_values[idx])
             splits.append(end - start)
 
         return CustomTrajSamples(
-                th.cat(_obs),
-                th.cat(_act),
-                th.cat(_rew),
-                th.cat(_pol),
-                th.cat(_lpol),
-                th.cat(_val),
-                _last,
-                splits)
+            th.cat(_obs),
+            th.cat(_act),
+            th.cat(_rew),
+            th.cat(_pol),
+            th.cat(_lpol),
+            th.cat(_val),
+            _last,
+            splits,
+        )

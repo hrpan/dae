@@ -57,8 +57,8 @@ class QVPPO(OnPolicyAlgorithm):
         gamma: float = 0.99,
         clip_range: Union[float, Schedule] = 0.2,
         ent_coef: float = 0.01,
-        kl_coef: float = 0.,
-        vf_coef: float = .5,
+        kl_coef: float = 0.0,
+        vf_coef: float = 0.5,
         max_grad_norm: float = 0.5,
         tensorboard_log: Optional[str] = None,
         advantage_normalization: bool = False,
@@ -101,15 +101,26 @@ class QVPPO(OnPolicyAlgorithm):
         self.kl_coef = kl_coef
 
         self.discount_matrix = th.tensor(
-            [[0 if j < i else self.gamma ** (j-i) for j in range(n_steps)] for i in range(n_steps)],
-            dtype=th.float32, device=self.device)
-        self.discount_vector = gamma ** th.arange(n_steps, 0, -1, dtype=th.float32, device=self.device)
+            [
+                [0 if j < i else self.gamma ** (j - i) for j in range(n_steps)]
+                for i in range(n_steps)
+            ],
+            dtype=th.float32,
+            device=self.device,
+        )
+        self.discount_vector = gamma ** th.arange(
+            n_steps, 0, -1, dtype=th.float32, device=self.device
+        )
 
         if _init_setup_model:
             self._setup_model()
 
     def collect_rollouts(
-        self, env: VecEnv, callback: BaseCallback, rollout_buffer: CustomBuffer, n_rollout_steps: int
+        self,
+        env: VecEnv,
+        callback: BaseCallback,
+        rollout_buffer: CustomBuffer,
+        n_rollout_steps: int,
     ) -> bool:
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
@@ -136,7 +147,9 @@ class QVPPO(OnPolicyAlgorithm):
             with th.no_grad():
                 # Convert to pytorch tensor
                 obs_tensor = th.as_tensor(self._last_obs, device=self.device)
-                actions, policies, log_policies, values = self.policy.forward(obs_tensor)
+                actions, policies, log_policies, values = self.policy.forward(
+                    obs_tensor
+                )
             actions = actions.cpu().numpy()
 
             new_obs, rewards, dones, infos = env.step(actions)
@@ -150,7 +163,9 @@ class QVPPO(OnPolicyAlgorithm):
             self._update_info_buffer(infos)
 
             actions = actions.reshape(-1, 1)
-            rollout_buffer.add(self._last_obs, actions, rewards, dones, policies, log_policies, values)
+            rollout_buffer.add(
+                self._last_obs, actions, rewards, dones, policies, log_policies, values
+            )
 
             self._last_obs = new_obs
 
@@ -178,7 +193,7 @@ class QVPPO(OnPolicyAlgorithm):
             observation_space=self.observation_space,
             action_space=self.action_space,
             lr_schedule=self.lr_schedule,
-            **self.policy_kwargs
+            **self.policy_kwargs,
         )
         self.policy = self.policy.to(self.device)
 
@@ -188,7 +203,7 @@ class QVPPO(OnPolicyAlgorithm):
     def _setup_lr_schedule(self) -> None:
         self.lr_schedule = get_schedule_fn(self.learning_rate)
 
-    def _update_learning_rate(self, optimizer, schedule, suffix=''):
+    def _update_learning_rate(self, optimizer, schedule, suffix=""):
 
         new_lr = schedule(self._current_progress_remaining)
 
@@ -197,14 +212,22 @@ class QVPPO(OnPolicyAlgorithm):
         update_learning_rate(optimizer, new_lr)
 
     def _value_loss(self, deltas, values, lasts):
-        loss = th.cat([
-            (self.discount_matrix[:len(d), :len(d)].matmul(d) + l * self.discount_vector[-len(d):] - v).square()
-            for d, v, l in zip(deltas, values, lasts)
-        ]).mean()
+        loss = th.cat(
+            [
+                (
+                    self.discount_matrix[: len(d), : len(d)].matmul(d)
+                    + l * self.discount_vector[-len(d) :]
+                    - v
+                ).square()
+                for d, v, l in zip(deltas, values, lasts)
+            ]
+        ).mean()
 
         return loss
 
-    def _policy_loss(self, advantages, log_policy, old_log_policy, actions, clip_range=None):
+    def _policy_loss(
+        self, advantages, log_policy, old_log_policy, actions, clip_range=None
+    ):
 
         if self.full_action:
 
@@ -237,7 +260,7 @@ class QVPPO(OnPolicyAlgorithm):
 
         entropy_losses, clip_fractions, gnorms = [], [], []
         losses, value_losses, pg_losses, kl_divs = [], [], [], []
-        gnorm_max, gnorm_min = 0, float('inf')
+        gnorm_max, gnorm_min = 0, float("inf")
 
         for epoch in range(self.n_epochs):
 
@@ -249,20 +272,32 @@ class QVPPO(OnPolicyAlgorithm):
                 last_values = data.last_values
                 lengths = data.lengths
 
-                values, q_values, policies, log_policies, entropy = \
-                    self.policy.evaluate_state(data.observations)
+                (
+                    values,
+                    q_values,
+                    policies,
+                    log_policies,
+                    entropy,
+                ) = self.policy.evaluate_state(data.observations)
 
                 # value loss
                 values = values.flatten()
                 q_values = q_values.gather(dim=1, index=actions).flatten()
-                targets = th.cat([self.discount_matrix[:len(r), :len(r)].matmul(r) + l * self.discount_vector[-len(r):]
-                                 for r, l in zip(rewards.split(lengths), last_values)])
+                targets = th.cat(
+                    [
+                        self.discount_matrix[: len(r), : len(r)].matmul(r)
+                        + l * self.discount_vector[-len(r) :]
+                        for r, l in zip(rewards.split(lengths), last_values)
+                    ]
+                )
                 v_loss = (values - targets).square().mean()
                 q_loss = (q_values - targets).square().mean()
-                value_loss = .5 * (v_loss + q_loss)
+                value_loss = 0.5 * (v_loss + q_loss)
 
                 # kl divergence
-                kl_loss = (old_policies * (old_log_policies - log_policies)).sum(dim=1).mean()
+                kl_loss = (
+                    (old_policies * (old_log_policies - log_policies)).sum(dim=1).mean()
+                )
 
                 # normalize adv
                 advantages = (q_values - values).detach().clone()
@@ -279,25 +314,36 @@ class QVPPO(OnPolicyAlgorithm):
                 policy_loss = -th.min(policy_loss_1, policy_loss_2).mean()
 
                 # entropy loss
-                entropy_loss = - th.mean(entropy)
+                entropy_loss = -th.mean(entropy)
 
                 # full loss
-                loss = policy_loss \
-                    + self.ent_coef * entropy_loss \
-                    + self.kl_coef * kl_loss \
+                loss = (
+                    policy_loss
+                    + self.ent_coef * entropy_loss
+                    + self.kl_coef * kl_loss
                     + self.vf_coef * value_loss
+                )
 
                 losses.append(loss.item())
                 self.policy.optimizer.zero_grad(set_to_none=True)
                 loss.backward()
-                gnorm = th.norm(th.stack([
-                    th.norm(p.grad) for p in self.policy.parameters() if p.grad is not None])).item()
+                gnorm = th.norm(
+                    th.stack(
+                        [
+                            th.norm(p.grad)
+                            for p in self.policy.parameters()
+                            if p.grad is not None
+                        ]
+                    )
+                ).item()
                 gnorm_max = max(gnorm_max, gnorm)
                 gnorm_min = min(gnorm_min, gnorm)
 
                 self.policy.optimizer.step()
                 # Logging
-                clip_fractions.append(th.mean((th.abs(ratio - 1) > clip_range).float()).item())
+                clip_fractions.append(
+                    th.mean((th.abs(ratio - 1) > clip_range).float()).item()
+                )
                 pg_losses.append(policy_loss.item())
                 value_losses.append(value_loss.item())
                 entropy_losses.append(entropy_loss.item())
@@ -310,7 +356,9 @@ class QVPPO(OnPolicyAlgorithm):
         self.logger.record("train/clip_range", clip_range)
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
-        self.logger.record("train/policy_min",  self.rollout_buffer.policies.min().item())
+        self.logger.record(
+            "train/policy_min", self.rollout_buffer.policies.min().item()
+        )
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         self.logger.record("train/value_loss", np.mean(value_losses))
         self.logger.record("train/gnorm", np.mean(gnorms))

@@ -16,11 +16,14 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 
 def _worker(
-    remote: mp.connection.Connection, parent_remote: mp.connection.Connection, env_fn_wrapper: CloudpickleWrapper
+    remote: mp.connection.Connection,
+    parent_remote: mp.connection.Connection,
+    env_fn_wrapper: CloudpickleWrapper,
 ) -> None:
     # Import here to avoid a circular import
 
     from algo.util import register_envs
+
     register_envs()
 
     parent_remote.close()
@@ -77,7 +80,12 @@ class CustomVecEnv(VecEnv):
     :param threads: number of parallel threads
     """
 
-    def __init__(self, env_fns: List[Callable[[], gym.Env]], start_method: Optional[str] = None, threads: int = 1):
+    def __init__(
+        self,
+        env_fns: List[Callable[[], gym.Env]],
+        start_method: Optional[str] = None,
+        threads: int = 1,
+    ):
         self.waiting = False
         self.closed = False
         n_envs = len(env_fns)
@@ -91,7 +99,9 @@ class CustomVecEnv(VecEnv):
         ctx = mp.get_context(start_method)
 
         self.threads = min(threads, len(env_fns))
-        self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(self.threads)])
+        self.remotes, self.work_remotes = zip(
+            *[ctx.Pipe() for _ in range(self.threads)]
+        )
         self.processes = []
         self.slicing = []
         q, r = divmod(len(env_fns), self.threads)
@@ -100,12 +110,18 @@ class CustomVecEnv(VecEnv):
             n = q + (1 if thread < r else 0)
             self.slicing.append(slice(l, l + n))
             l += n
-        for work_remote, remote, sli in zip(self.work_remotes, self.remotes, self.slicing):
+        for work_remote, remote, sli in zip(
+            self.work_remotes, self.remotes, self.slicing
+        ):
+
             def wrapper():
                 return DummyVecEnv(env_fns[sli])
+
             args = (work_remote, remote, CloudpickleWrapper(wrapper))
             # daemon=True: if the main process crashes, we should not cause things to hang
-            process = ctx.Process(target=_worker, args=args, daemon=True)  # pytype:disable=attribute-error
+            process = ctx.Process(
+                target=_worker, args=args, daemon=True
+            )  # pytype:disable=attribute-error
             process.start()
             self.processes.append(process)
             work_remote.close()
@@ -123,7 +139,12 @@ class CustomVecEnv(VecEnv):
         results = [remote.recv() for remote in self.remotes]
         self.waiting = False
         obs, rews, dones, infos = zip(*results)
-        return np.concatenate(obs), np.concatenate(rews), np.concatenate(dones), tuple(sum(infos, []))
+        return (
+            np.concatenate(obs),
+            np.concatenate(rews),
+            np.concatenate(dones),
+            tuple(sum(infos, [])),
+        )
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         for idx, (remote, sli) in enumerate(zip(self.remotes, self.slicing)):
@@ -159,13 +180,23 @@ class CustomVecEnv(VecEnv):
     def get_attr(self, attr_name: str, indices: VecEnvIndices = None) -> List[Any]:
         raise NotImplementedError()
 
-    def set_attr(self, attr_name: str, value: Any, indices: VecEnvIndices = None) -> None:
+    def set_attr(
+        self, attr_name: str, value: Any, indices: VecEnvIndices = None
+    ) -> None:
         raise NotImplementedError()
 
-    def env_method(self, method_name: str, *method_args, indices: VecEnvIndices = None, **method_kwargs) -> List[Any]:
+    def env_method(
+        self,
+        method_name: str,
+        *method_args,
+        indices: VecEnvIndices = None,
+        **method_kwargs,
+    ) -> List[Any]:
         raise NotImplementedError()
 
-    def env_is_wrapped(self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None) -> List[bool]:
+    def env_is_wrapped(
+        self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None
+    ) -> List[bool]:
         for remote in self.remotes:
             remote.send(("is_wrapped", wrapper_class))
         return sum([remote.recv() for remote in self.remotes], [])

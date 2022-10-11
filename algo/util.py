@@ -10,14 +10,26 @@ from gym.envs import register
 from minatar import Environment
 
 from stable_baselines3.common.utils import get_linear_fn
-from stable_baselines3.common.vec_env.base_vec_env import VecEnv, VecEnvObs, VecEnvStepReturn, VecEnvWrapper
+from stable_baselines3.common.vec_env.base_vec_env import (
+    VecEnv,
+    VecEnvObs,
+    VecEnvStepReturn,
+    VecEnvWrapper,
+)
 
 
 class BaseEnv(gym.Env):
     # Adapted from https://github.com/qlan3/gym-games
     metadata = {"render.modes": ["human", "array"]}
 
-    def __init__(self, game, display_time=50, use_minimal_action_set=False, max_steps=500000, **kwargs):
+    def __init__(
+        self,
+        game,
+        display_time=50,
+        use_minimal_action_set=False,
+        max_steps=500000,
+        **kwargs
+    ):
         self.game_name = game
         self.display_time = display_time
 
@@ -52,9 +64,7 @@ class BaseEnv(gym.Env):
 
     def seed(self, seed=None):
         self.game = Environment(
-            env_name=self.game_name,
-            random_seed=seed,
-            **self.game_kwargs
+            env_name=self.game_name, random_seed=seed, **self.game_kwargs
         )
         return seed
 
@@ -72,7 +82,7 @@ class BaseEnv(gym.Env):
 
 def register_envs():
     for game in ["asterix", "breakout", "freeway", "seaquest", "space_invaders"]:
-        name = game.title().replace('_', '')
+        name = game.title().replace("_", "")
         register(
             id="{}-MinAtar-v0".format(name),
             entry_point="algo.util:BaseEnv",
@@ -81,25 +91,29 @@ def register_envs():
                 display_time=50,
                 use_minimal_action_set=True,
                 sticky_action_prob=0,
-                difficulty_ramping=False
+                difficulty_ramping=False,
             ),
         )
 
 
-def get_fn(init, final, ftype='linear'):
+def get_fn(init, final, ftype="linear"):
     if init == final:
         return init
     else:
-        if ftype == 'linear':
-            return get_linear_fn(init, final, 1.)
-        elif ftype == 'exp':
+        if ftype == "linear":
+            return get_linear_fn(init, final, 1.0)
+        elif ftype == "exp":
+
             def f(p):
                 return init * np.exp(np.log(final / init) * (1 - p))
+
             return f
-        elif ftype == 'inverse':
+        elif ftype == "inverse":
+
             def f(p):
                 k = (init / final) - 1
                 return init / (1 + k * (1 - p))
+
             return f
 
 
@@ -128,7 +142,9 @@ class VecTranspose(VecEnvWrapper):
         # Sanity checks
         height, width, channels = observation_space.shape
         new_shape = (channels, height, width)
-        return spaces.Box(low=0, high=255, shape=new_shape, dtype=observation_space.dtype)
+        return spaces.Box(
+            low=0, high=255, shape=new_shape, dtype=observation_space.dtype
+        )
 
     @staticmethod
     def transpose_image(image: np.ndarray) -> np.ndarray:
@@ -150,7 +166,9 @@ class VecTranspose(VecEnvWrapper):
             if not done:
                 continue
             if "terminal_observation" in infos[idx]:
-                infos[idx]["terminal_observation"] = self.transpose_image(infos[idx]["terminal_observation"])
+                infos[idx]["terminal_observation"] = self.transpose_image(
+                    infos[idx]["terminal_observation"]
+                )
 
         return self.transpose_image(observations), rewards, dones, infos
 
@@ -173,9 +191,7 @@ class VecLogger(VecEnvWrapper):
     """
 
     def __init__(
-        self,
-        venv: VecEnv,
-        logdir: Optional[str] = None,
+        self, venv: VecEnv, logdir: Optional[str] = None,
     ):
         # Avoid circular import
         from stable_baselines3.common.monitor import ResultsWriter
@@ -185,8 +201,10 @@ class VecLogger(VecEnvWrapper):
 
         if logdir:
             os.makedirs(logdir, exist_ok=True)
-            filename = os.path.join(logdir, '0')
-            self.results_writer = ResultsWriter(filename, header={"t_start": self.t_start})
+            filename = os.path.join(logdir, "0")
+            self.results_writer = ResultsWriter(
+                filename, header={"t_start": self.t_start}
+            )
         else:
             self.results_writer = None
 
@@ -200,12 +218,16 @@ class VecLogger(VecEnvWrapper):
     def step_wait(self) -> VecEnvStepReturn:
         obs, rewards, dones, infos = self.venv.step_wait()
         for done, info in zip(dones, infos):
-            if done and 'episode' in info:
-                ep_info = info['episode']
-                self.scores.append(ep_info['r'])
-                self.steps += ep_info['l']
+            if done and "episode" in info:
+                ep_info = info["episode"]
+                self.scores.append(ep_info["r"])
+                self.steps += ep_info["l"]
                 if self.results_writer:
-                    episode_info = {"r": ep_info['r'], "l": ep_info['l'], "t": round(time.time() - self.t_start, 6)}
+                    episode_info = {
+                        "r": ep_info["r"],
+                        "l": ep_info["l"],
+                        "t": round(time.time() - self.t_start, 6),
+                    }
                     self.results_writer.write_row(episode_info)
         return obs, rewards, dones, infos
 
