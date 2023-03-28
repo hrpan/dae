@@ -49,11 +49,13 @@ and open the displayed URL in a browser.
 Please use the following BibTex entry.
 
 ```
-@article{pan2021direct,
-  title={Direct Advantage Estimation},
+@article{pan2022direct,
+  title={Direct advantage estimation},
   author={Pan, Hsiao-Ru and G{\"u}rtler, Nico and Neitz, Alexander and Sch{\"o}lkopf, Bernhard},
-  journal={arXiv preprint arXiv:2109.06093},
-  year={2021}
+  journal={Advances in Neural Information Processing Systems},
+  volume={35},
+  pages={11869--11880},
+  year={2022}
 }
 ```
 
